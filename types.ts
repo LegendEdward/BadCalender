@@ -1,4 +1,6 @@
-export type ThemeMode = 'arknights' | 'cartoon';
+
+export type ThemeMode = 'arknights' | 'cartoon' | 'cyberpunk' | 'nature';
+export type Language = 'en' | 'zh-CN' | 'zh-TW';
 
 export interface Task {
   id: string;
@@ -8,6 +10,7 @@ export interface Task {
   startTime: string; // HH:mm
   durationMinutes: number;
   completed: boolean;
+  isStarted: boolean; // New: Track if user clicked start
   isPriority: boolean;
 }
 
