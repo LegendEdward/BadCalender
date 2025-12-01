@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="theme-color" content="#0f172a" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <title>ChronoPlan</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              ark: {
+                bg: '#0f172a', // Slate 900
+                surface: '#1e293b', // Slate 800
+                primary: '#06b6d4', // Cyan 500
+                accent: '#f97316', // Orange 500
+                text: '#f1f5f9', // Slate 100
+                muted: '#64748b', // Slate 500
+              },
+              toon: {
+                bg: '#fff7ed', // Orange 50
+                surface: '#ffffff',
+                primary: '#fb7185', // Rose 400
+                accent: '#38bdf8', // Sky 400
+                text: '#4b5563', // Gray 600
+                muted: '#9ca3af', // Gray 400
+              }
+            },
+            fontFamily: {
+              mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+              sans: ['ui-sans-serif', 'system-ui', 'sans-serif', "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"],
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      /* Custom scrollbar for better mobile feel */
+      ::-webkit-scrollbar {
+        width: 4px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+      }
+      /* Arknights aesthetic extras */
+      .clip-angled {
+        clip-path: polygon(0 0, 100% 0, 100% 85%, 95% 100%, 0 100%);
+      }
+      .clip-angled-reverse {
+        clip-path: polygon(5% 0, 100% 0, 100% 100%, 0 100%, 0 15%);
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.555.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/"
+  }
+}
+</script>
+</head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
