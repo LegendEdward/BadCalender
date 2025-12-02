@@ -1,4 +1,5 @@
 
+
 import { Language } from './types';
 
 export const translations: Record<Language, Record<string, string>> = {
@@ -78,7 +79,7 @@ export const translations: Record<Language, Record<string, string>> = {
     apiKeyPlaceholder: 'Enter Gemini API Key',
     apiKeyHelp: 'Key is stored locally in your browser.',
     
-    // New Translations
+    // Task Nets & Conflicts
     conflictTitle: 'Time Conflict Detected',
     conflictMsg: 'This task overlaps with "{0}" ({1}). Save anyway?',
     taskNets: 'Task Nets',
@@ -94,6 +95,19 @@ export const translations: Record<Language, Record<string, string>> = {
     deleteNet: 'Delete Net',
     noNets: 'No saved Task Nets.',
     netCreated: 'Task Net Created!',
+    
+    // Auth & Drag
+    login: 'Login',
+    register: 'Register',
+    username: 'Username',
+    password: 'Password',
+    loginError: 'Invalid username or password',
+    registerError: 'Username already exists',
+    welcomeBack: 'Welcome Back',
+    guestMode: 'Guest Mode',
+    logout: 'Logout',
+    dropToSave: 'Drop to Save',
+    dragHint: 'Drag tasks here',
   },
   'zh-CN': {
     appTitle: '时序计划',
@@ -171,7 +185,7 @@ export const translations: Record<Language, Record<string, string>> = {
     apiKeyPlaceholder: '在此输入 API Key',
     apiKeyHelp: 'Key 仅保存在您的浏览器本地缓存中。',
     
-    // New Translations
+    // Task Nets & Conflicts
     conflictTitle: '时间冲突检测',
     conflictMsg: '该任务与 "{0}" ({1}) 时间重叠。是否继续保存？',
     taskNets: '任务网',
@@ -187,6 +201,19 @@ export const translations: Record<Language, Record<string, string>> = {
     deleteNet: '删除网',
     noNets: '暂无保存的任务网',
     netCreated: '任务已收入网中！',
+
+    // Auth & Drag
+    login: '登录',
+    register: '注册',
+    username: '用户名',
+    password: '密码',
+    loginError: '用户名或密码错误',
+    registerError: '该用户名已存在',
+    welcomeBack: '欢迎回来',
+    guestMode: '访客模式',
+    logout: '退出登录',
+    dropToSave: '松手保存',
+    dragHint: '拖拽任务到此处',
   },
   'zh-TW': {
     appTitle: '時序計畫',
@@ -244,7 +271,7 @@ export const translations: Record<Language, Record<string, string>> = {
     profile: '個人中心',
     daysUsed: '堅持天數',
     totalTasks: '累計完成',
-    nickname: '暱稱',
+    nickname: '昵稱',
     bio: '個人簽名',
     gender: '性別',
     male: '男',
@@ -280,5 +307,18 @@ export const translations: Record<Language, Record<string, string>> = {
     deleteNet: '刪除網',
     noNets: '暫無保存的任务網',
     netCreated: '任務已收入網中！',
+
+    // Auth & Drag
+    login: '登錄',
+    register: '註冊',
+    username: '用戶名',
+    password: '密碼',
+    loginError: '用戶名或密碼錯誤',
+    registerError: '該用戶名已存在',
+    welcomeBack: '歡迎回來',
+    guestMode: '訪客模式',
+    logout: '退出登錄',
+    dropToSave: '鬆手保存',
+    dragHint: '拖拽任務到此處',
   }
 };

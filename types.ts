@@ -57,3 +57,10 @@ export interface ChatMessage {
   text: string;
   timestamp: number;
 }
+
+export interface User {
+  id: string;
+  username: string;
+  password: string; // In a real app, this should be hashed. LocalStorage demo uses plain/encoded.
+  themePreference?: ThemeMode;
+}

@@ -2,7 +2,7 @@
 import React from 'react';
 import { Task, ThemeMode, TimePartition, Category } from '../types';
 import { parseTime } from '../utils';
-import { ChevronDown, ChevronRight, Plus, GitCommit, Play, Circle, CheckCircle2, Square, CheckSquare } from 'lucide-react';
+import { ChevronDown, ChevronRight, Plus, GitCommit, Play, Circle, CheckCircle2, Square, CheckSquare, GripVertical } from 'lucide-react';
 
 interface TimelineProps {
   tasks: Task[];
@@ -72,6 +72,13 @@ const TimelineNode: React.FC<{
     btnClass = 'text-gray-500 hover:text-gray-800';
   }
 
+  // Drag Handlers
+  const handleDragStart = (e: React.DragEvent) => {
+    e.dataTransfer.setData("taskId", task.id);
+    e.dataTransfer.effectAllowed = "copy";
+    // Create a ghost element if needed, but default usually works
+  };
+
   // Override click for selection mode
   const handleCardClick = () => {
     if (isSelectionMode) {
@@ -107,7 +114,9 @@ const TimelineNode: React.FC<{
 
          {/* Task Card */}
          <div 
-            className={`flex-1 mb-4 p-3 transition-all cursor-pointer ${cardClass} ${task.completed ? 'opacity-50 grayscale' : ''} ${isSelectionMode && isSelected ? 'ring-2 ring-offset-1 ring-current' : ''}`} 
+            draggable={!isSelectionMode}
+            onDragStart={handleDragStart}
+            className={`flex-1 mb-4 p-3 transition-all cursor-pointer group ${cardClass} ${task.completed ? 'opacity-50 grayscale' : ''} ${isSelectionMode && isSelected ? 'ring-2 ring-offset-1 ring-current' : ''}`} 
             onClick={handleCardClick}
          >
             <div className="flex justify-between items-start">
@@ -116,6 +125,9 @@ const TimelineNode: React.FC<{
                      <span className="font-mono text-xs opacity-60 font-bold">{task.startTime}</span>
                      {category && (
                        <span className={`text-[10px] px-1.5 rounded border border-current opacity-70`}>{category.name}</span>
+                     )}
+                     {!isSelectionMode && (
+                        <GripVertical size={12} className="opacity-0 group-hover:opacity-30 cursor-grab" />
                      )}
                   </div>
                   <h4 className={`font-bold leading-tight mt-1 ${isCyber && task.isPriority ? 'text-[#f0f]' : ''}`}>{task.title}</h4>

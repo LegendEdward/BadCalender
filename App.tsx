@@ -7,16 +7,17 @@ import {
   Plus, 
   Settings,
   List,
-  User,
+  User as UserIcon,
   Filter,
   Network,
   Grid,
   CheckSquare,
   X as XIcon,
-  Save
+  Save,
+  LogOut
 } from 'lucide-react';
 
-import { ThemeMode, Task, Language, TimePartition, Category, UserProfile, ChatMessage, TaskBundle } from './types';
+import { ThemeMode, Task, Language, TimePartition, Category, UserProfile, ChatMessage, TaskBundle, User } from './types';
 import { formatDateKey, getTodayKey, generateId } from './utils';
 import { translations } from './translations';
 import SettingsModal from './components/SettingsModal';
@@ -29,9 +30,13 @@ import ZoneManager from './components/ZoneManager';
 import UserProfileModal from './components/UserProfileModal';
 import PetChatModal from './components/PetChatModal';
 import TaskNetModal from './components/TaskNetModal';
+import LoginScreen from './components/LoginScreen';
 
 const App: React.FC = () => {
-  // --- State ---
+  // --- Auth State ---
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+
+  // --- App State ---
   const [theme, setTheme] = useState<ThemeMode>('arknights');
   const [language, setLanguage] = useState<Language>('zh-CN');
   const [apiKey, setApiKey] = useState('');
@@ -52,6 +57,7 @@ const App: React.FC = () => {
   const [taskBundles, setTaskBundles] = useState<TaskBundle[]>([]);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
+  const [isDragOverNet, setIsDragOverNet] = useState(false); // For Drop zone visual
 
   // Configuration State
   const [partitions, setPartitions] = useState<TimePartition[]>([
@@ -80,50 +86,78 @@ const App: React.FC = () => {
   const notificationLog = useRef<Set<string>>(new Set());
   const t = translations[language];
 
-  // --- Initialization & Storage ---
+  // --- Helper: Get Key with User ID ---
+  const getStorageKey = (key: string) => {
+    if (!currentUser) return key; // Fallback
+    return `${key}_${currentUser.id}`;
+  };
+
+  // --- Initialization Logic ---
+  // Load Global Settings (independent of user)
   useEffect(() => {
     const savedTheme = localStorage.getItem('chrono_theme') as ThemeMode;
     if (savedTheme) setTheme(savedTheme);
-
     const savedLang = localStorage.getItem('chrono_lang') as Language;
     if (savedLang) setLanguage(savedLang);
-
-    const savedKey = localStorage.getItem('chrono_apikey');
-    if (savedKey) setApiKey(savedKey);
-
-    const savedTasks = localStorage.getItem('chrono_tasks');
-    if (savedTasks) try { setTasks(JSON.parse(savedTasks)); } catch (e) { console.error(e); }
-
-    const savedHistory = localStorage.getItem('chrono_history');
-    if (savedHistory) setTotalCompletedHistory(Number(savedHistory));
-
-    const savedParts = localStorage.getItem('chrono_partitions');
-    if (savedParts) try { setPartitions(JSON.parse(savedParts)); } catch (e) {}
-
-    const savedCats = localStorage.getItem('chrono_categories');
-    if (savedCats) try { setCategories(JSON.parse(savedCats)); } catch (e) {}
-
-    const savedProfile = localStorage.getItem('chrono_profile');
-    if (savedProfile) try { setUserProfile(JSON.parse(savedProfile)); } catch (e) {}
-
-    const savedPetName = localStorage.getItem('chrono_petname');
-    if (savedPetName) setPetName(savedPetName);
-
-    const savedBundles = localStorage.getItem('chrono_bundles');
-    if (savedBundles) try { setTaskBundles(JSON.parse(savedBundles)); } catch (e) {}
+    
+    // Check if session persists (simple check)
+    const savedUser = sessionStorage.getItem('chrono_active_user');
+    if (savedUser) {
+      setCurrentUser(JSON.parse(savedUser));
+    }
   }, []);
 
-  // Save changes
+  // Load User Data when User Changes
+  useEffect(() => {
+    if (!currentUser) return;
+
+    // Apply User Theme Preference if exists
+    if (currentUser.themePreference) {
+      setTheme(currentUser.themePreference);
+    }
+
+    const load = (key: string, setter: any, parser: any = JSON.parse) => {
+      const stored = localStorage.getItem(getStorageKey(key));
+      if (stored) {
+        try { setter(parser(stored)); } catch(e) { console.error(`Error loading ${key}`, e); }
+      } else {
+        // Reset to defaults if new user
+        if (key === 'chrono_tasks') setter([]);
+        if (key === 'chrono_history') setter(0);
+        if (key === 'chrono_bundles') setter([]);
+        // Keep default partitions/cats
+      }
+    };
+
+    load('chrono_tasks', setTasks);
+    load('chrono_history', setTotalCompletedHistory, Number);
+    load('chrono_apikey', setApiKey, (v: string) => v); // Plain string
+    load('chrono_partitions', setPartitions);
+    load('chrono_categories', setCategories);
+    load('chrono_profile', setUserProfile);
+    load('chrono_petname', setPetName, (v: string) => v);
+    load('chrono_bundles', setTaskBundles);
+
+    // Reset view
+    setView('day');
+    setIsSelectionMode(false);
+    
+  }, [currentUser]);
+
+  // --- Save Logic ---
+  // We wrap localStorage.setItem to use user-specific keys
   useEffect(() => { localStorage.setItem('chrono_theme', theme); }, [theme]);
   useEffect(() => { localStorage.setItem('chrono_lang', language); }, [language]);
-  useEffect(() => { localStorage.setItem('chrono_apikey', apiKey); }, [apiKey]);
-  useEffect(() => { localStorage.setItem('chrono_tasks', JSON.stringify(tasks)); }, [tasks]);
-  useEffect(() => { localStorage.setItem('chrono_history', String(totalCompletedHistory)); }, [totalCompletedHistory]);
-  useEffect(() => { localStorage.setItem('chrono_partitions', JSON.stringify(partitions)); }, [partitions]);
-  useEffect(() => { localStorage.setItem('chrono_categories', JSON.stringify(categories)); }, [categories]);
-  useEffect(() => { localStorage.setItem('chrono_profile', JSON.stringify(userProfile)); }, [userProfile]);
-  useEffect(() => { localStorage.setItem('chrono_petname', petName); }, [petName]);
-  useEffect(() => { localStorage.setItem('chrono_bundles', JSON.stringify(taskBundles)); }, [taskBundles]);
+
+  // Persist User Data
+  useEffect(() => { if(currentUser) localStorage.setItem(getStorageKey('chrono_apikey'), apiKey); }, [apiKey, currentUser]);
+  useEffect(() => { if(currentUser) localStorage.setItem(getStorageKey('chrono_tasks'), JSON.stringify(tasks)); }, [tasks, currentUser]);
+  useEffect(() => { if(currentUser) localStorage.setItem(getStorageKey('chrono_history'), String(totalCompletedHistory)); }, [totalCompletedHistory, currentUser]);
+  useEffect(() => { if(currentUser) localStorage.setItem(getStorageKey('chrono_partitions'), JSON.stringify(partitions)); }, [partitions, currentUser]);
+  useEffect(() => { if(currentUser) localStorage.setItem(getStorageKey('chrono_categories'), JSON.stringify(categories)); }, [categories, currentUser]);
+  useEffect(() => { if(currentUser) localStorage.setItem(getStorageKey('chrono_profile'), JSON.stringify(userProfile)); }, [userProfile, currentUser]);
+  useEffect(() => { if(currentUser) localStorage.setItem(getStorageKey('chrono_petname'), petName); }, [petName, currentUser]);
+  useEffect(() => { if(currentUser) localStorage.setItem(getStorageKey('chrono_bundles'), JSON.stringify(taskBundles)); }, [taskBundles, currentUser]);
 
   // Sync Android Status Bar Color
   useEffect(() => {
@@ -189,9 +223,17 @@ const App: React.FC = () => {
     return tasks.filter(t => t.dateStr < todayStr && !t.completed);
   }, [tasks, todayStr]);
 
-  const completedTasks = currentTasks.filter(t => t.completed);
-
   // --- Handlers ---
+  const handleLogin = (user: User) => {
+    setCurrentUser(user);
+    sessionStorage.setItem('chrono_active_user', JSON.stringify(user));
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    sessionStorage.removeItem('chrono_active_user');
+  };
+
   const handleSaveTask = (task: Task) => {
     if (editingTask) {
       setTasks(prev => prev.map(t => t.id === task.id ? task : t));
@@ -263,11 +305,32 @@ const App: React.FC = () => {
     setSelectedTaskIds(new Set());
   };
 
+  // Drag and Drop Logic for Nets
+  const handleDropOnNet = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOverNet(false);
+    const taskId = e.dataTransfer.getData("taskId");
+    if (!taskId) return;
+
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    if (window.confirm(t.saveToNet + "?")) {
+       const newBundle: TaskBundle = {
+          id: generateId(),
+          name: task.title, // Default name
+          createdAt: Date.now(),
+          tasks: [{...task}]
+       };
+       setTaskBundles(prev => [...prev, newBundle]);
+       setIsTaskNetOpen(true); // Open modal to show it
+    }
+  };
+
   const loadBundle = (bundle: TaskBundle) => {
     if (!window.confirm(t.loadNetConfirm.replace('{0}', String(bundle.tasks.length)))) return;
 
     // Clone tasks and update dates to current selected date
-    // Also regenerate IDs to avoid collisions if loaded multiple times
     const idMap = new Map<string, string>();
     bundle.tasks.forEach(t => idMap.set(t.id, generateId()));
 
@@ -321,6 +384,12 @@ const App: React.FC = () => {
     fabSecondaryClass = 'bg-white text-toon-primary border border-toon-primary rounded-full shadow-md';
   }
 
+  // --- RENDER ---
+
+  if (!currentUser) {
+    return <LoginScreen onLogin={handleLogin} language={language} setLanguage={setLanguage} theme={theme} setTheme={setTheme} />;
+  }
+
   return (
     <div className={`min-h-screen transition-colors duration-500 pb-24 ${bgClass}`}>
       
@@ -359,6 +428,14 @@ const App: React.FC = () => {
              </>
            ) : (
              <>
+               {/* Logout Button */}
+               <button 
+                 onClick={handleLogout}
+                 className={`p-2 rounded-full transition-all text-red-500 hover:bg-red-500 hover:text-white ${isArk ? 'bg-ark-surface border border-ark-muted' : (isCyber ? 'bg-black border border-[#f0f]' : 'bg-white shadow-sm')}`}
+               >
+                 <LogOut size={20} />
+               </button>
+
                {/* Selection Mode Toggle */}
                {view === 'day' && (
                  <button 
@@ -376,7 +453,7 @@ const App: React.FC = () => {
                   {userProfile.avatar ? (
                     <img src={userProfile.avatar} className="w-5 h-5 rounded-full object-cover" alt="Me" />
                   ) : (
-                    <User size={20} />
+                    <UserIcon size={20} />
                   )}
                </button>
                {/* Settings Button */}
@@ -529,13 +606,25 @@ const App: React.FC = () => {
       {/* FABs */}
       {!isSelectionMode && (
         <>
-          <button
-            onClick={() => setIsTaskNetOpen(true)}
-            className={`fixed bottom-40 right-6 p-3 transition-all hover:scale-110 active:scale-90 z-40 ${fabSecondaryClass} border-none bg-opacity-90`}
-            title={t.taskNets}
+          <div
+            onDragOver={(e) => { e.preventDefault(); setIsDragOverNet(true); }}
+            onDragLeave={() => setIsDragOverNet(false)}
+            onDrop={handleDropOnNet}
+            className="fixed bottom-40 right-6 z-40 transition-all duration-300"
           >
-            <Grid size={24} />
-          </button>
+             {isDragOverNet && (
+               <div className="absolute right-14 top-2 whitespace-nowrap bg-black/70 text-white px-2 py-1 rounded text-xs animate-pulse">
+                 {t.dropToSave}
+               </div>
+             )}
+             <button
+              onClick={() => setIsTaskNetOpen(true)}
+              className={`p-3 transition-all hover:scale-110 active:scale-90 ${fabSecondaryClass} border-none bg-opacity-90 ${isDragOverNet ? 'scale-125 ring-4 ring-green-500' : ''}`}
+              title={t.taskNets}
+            >
+              <Grid size={24} />
+            </button>
+          </div>
 
           <button
             onClick={() => setIsZoneManagerOpen(true)}
