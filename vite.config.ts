@@ -5,6 +5,9 @@ export default defineConfig({
   plugins: [react()],
   build: {
     outDir: 'dist',
+    rollupOptions: {
+      external: ['@google/genai'],
+    }
   },
   define: {
     'process.env.API_KEY': JSON.stringify(process.env.API_KEY),

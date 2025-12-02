@@ -34,30 +34,6 @@
             fontFamily: {
               mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
               sans: ['ui-sans-serif', 'system-ui', 'sans-serif', "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"],
-            },
-            keyframes: {
-              fadeIn: {
-                '0%': { opacity: '0' },
-                '100%': { opacity: '1' },
-              },
-              zoomIn: {
-                '0%': { opacity: '0', transform: 'scale(0.5)' },
-                '100%': { opacity: '1', transform: 'scale(1)' },
-              },
-              slideInLeft: {
-                '0%': { opacity: '0', transform: 'translateX(-20px)' },
-                '100%': { opacity: '1', transform: 'translateX(0)' },
-              },
-              slideInBottom: {
-                '0%': { opacity: '0', transform: 'translateY(20px)' },
-                '100%': { opacity: '1', transform: 'translateY(0)' },
-              }
-            },
-            animation: {
-              'fade-in': 'fadeIn 0.5s ease-out forwards',
-              'zoom-in': 'zoomIn 0.5s ease-out forwards',
-              'slide-in-left': 'slideInLeft 0.5s ease-out forwards',
-              'slide-in-bottom': 'slideInBottom 0.5s ease-out forwards',
             }
           }
         }
@@ -75,6 +51,18 @@
         background: #cbd5e1;
         border-radius: 4px;
       }
+      
+      /* Standard CSS Animations for reliability */
+      @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+      @keyframes zoomIn { from { opacity: 0; transform: scale(0.5); } to { opacity: 1; transform: scale(1); } }
+      @keyframes slideInLeft { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
+      @keyframes slideInBottom { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+      .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
+      .animate-zoom-in { animation: zoomIn 0.5s ease-out forwards; }
+      .animate-slide-in-left { animation: slideInLeft 0.5s ease-out forwards; }
+      .animate-slide-in-bottom { animation: slideInBottom 0.5s ease-out forwards; }
+
       /* Arknights aesthetic extras */
       .clip-angled {
         clip-path: polygon(0 0, 100% 0, 100% 85%, 95% 100%, 0 100%);

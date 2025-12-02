@@ -378,14 +378,14 @@ const App: React.FC = () => {
                </div>
             </div>
 
-            {/* View Switcher Button (Floating on Timeline Header normally, but putting it here for clarity) */}
+            {/* View Switcher Button */}
             <div className="flex justify-end mb-2">
                 <button onClick={() => setView(view === 'day' ? 'mindmap' : 'day')} className="text-xs flex items-center gap-1 opacity-70 hover:opacity-100">
                    {view === 'day' ? <Network size={14} /> : <List size={14} />} {view === 'day' ? t.mindMapView : t.listView}
                 </button>
             </div>
 
-            {/* Delayed Tasks (Only on list view usually, but keep logic consistent) */}
+            {/* Delayed Tasks */}
             {selectedDateStr === todayStr && delayedTasks.length > 0 && view === 'day' && (
               <DelayedList theme={theme} tasks={delayedTasks} language={language} onComplete={handleToggleComplete} />
             )}
@@ -393,7 +393,7 @@ const App: React.FC = () => {
             {/* MAIN CONTENT SWITCH */}
             {view === 'mindmap' ? (
                 <MindMapTimeline 
-                  tasks={tasks}
+                  tasks={currentTasks} // Pass ONLY current date tasks
                   theme={theme}
                   partitions={partitions}
                   categories={categories}
