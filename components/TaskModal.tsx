@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
-import { X, Clock, AlertCircle, FileText } from 'lucide-react';
-import { ThemeMode, Task, Language } from '../types';
-import { generateId } from '../utils';
+import { X, Clock, AlertCircle, FileText, Tag, GitMerge } from 'lucide-react';
+import { ThemeMode, Task, Language, Category } from '../types';
+import { generateId, parseTime, formatDuration } from '../utils';
 import { translations } from '../translations';
 
 interface TaskModalProps {
@@ -13,16 +13,21 @@ interface TaskModalProps {
   theme: ThemeMode;
   language: Language;
   initialData?: Task | null;
+  categories: Category[];
+  parentTask?: Task | null; // If passed, we are creating a subtask
 }
 
 const TaskModal: React.FC<TaskModalProps> = ({ 
-  isOpen, onClose, onSave, selectedDateStr, theme, language, initialData 
+  isOpen, onClose, onSave, selectedDateStr, theme, language, initialData, categories, parentTask 
 }) => {
   const [title, setTitle] = useState('');
   const [startTime, setStartTime] = useState('09:00');
   const [duration, setDuration] = useState(60);
   const [description, setDescription] = useState('');
   const [isPriority, setIsPriority] = useState(false);
+  const [categoryId, setCategoryId] = useState<string>('');
+  
+  const [errorMsg, setErrorMsg] = useState('');
 
   const t = translations[language];
 
@@ -34,22 +39,42 @@ const TaskModal: React.FC<TaskModalProps> = ({
         setDuration(initialData.durationMinutes);
         setDescription(initialData.description || '');
         setIsPriority(initialData.isPriority);
+        setCategoryId(initialData.categoryId || '');
       } else {
         setTitle('');
-        setStartTime('09:00');
-        setDuration(60);
+        // If subtask, default to parent start time
+        setStartTime(parentTask ? parentTask.startTime : '09:00');
+        setDuration(parentTask ? 30 : 60);
         setDescription('');
         setIsPriority(false);
+        setCategoryId('');
       }
+      setErrorMsg('');
     }
-  }, [isOpen, initialData]);
+  }, [isOpen, initialData, parentTask]);
 
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Subtask Validation
+    if (parentTask) {
+       const pStart = parseTime(parentTask.startTime);
+       const pEnd = pStart + parentTask.durationMinutes;
+       
+       const cStart = parseTime(startTime);
+       const cEnd = cStart + duration;
+
+       if (cStart < pStart || cEnd > pEnd) {
+         setErrorMsg(t.subtaskConstraint.replace('{0}', parentTask.startTime).replace('{1}', formatDuration(parentTask.durationMinutes)));
+         return;
+       }
+    }
+
     const newTask: Task = {
       id: initialData ? initialData.id : generateId(),
+      parentId: parentTask ? parentTask.id : (initialData?.parentId), // Preserve parentId on edit or set new
       dateStr: selectedDateStr,
       title,
       startTime,
@@ -58,6 +83,8 @@ const TaskModal: React.FC<TaskModalProps> = ({
       isStarted: initialData ? initialData.isStarted : false,
       description,
       isPriority,
+      categoryId: categoryId || undefined,
+      isExpanded: true
     };
     onSave(newTask);
     onClose();
@@ -71,27 +98,32 @@ const TaskModal: React.FC<TaskModalProps> = ({
   let inputClass = '';
   let btnClass = '';
   let cancelBtnClass = '';
+  let errorClass = '';
 
   if (isArk) {
     modalClass = 'bg-ark-surface border-2 border-ark-muted text-ark-text shadow-[0_0_20px_rgba(6,182,212,0.2)]';
     inputClass = 'bg-ark-bg border border-ark-muted focus:border-ark-primary text-white';
     btnClass = 'bg-ark-primary text-black hover:bg-cyan-300';
     cancelBtnClass = 'border border-ark-muted text-ark-muted hover:text-white';
+    errorClass = 'text-red-400 bg-red-900/20 border border-red-500';
   } else if (isCyber) {
     modalClass = 'bg-black border-2 border-[#f0f] text-[#0ff] shadow-[0_0_20px_#f0f]';
     inputClass = 'bg-[#111] border border-[#333] focus:border-[#0ff] text-[#0ff]';
     btnClass = 'bg-[#f0f] text-black hover:bg-[#ff55ff]';
     cancelBtnClass = 'border border-[#333] text-gray-500 hover:text-[#0ff]';
+    errorClass = 'text-[#f00] bg-[#f00]/10 border border-[#f00] glitch-text';
   } else if (isNature) {
     modalClass = 'bg-[#fefae0] border-2 border-[#ccd5ae] text-[#354f52] shadow-xl';
     inputClass = 'bg-[#faedcd] border border-[#d4a373] focus:border-[#606c38] text-[#354f52]';
     btnClass = 'bg-[#606c38] text-[#fefae0] hover:bg-[#283618]';
     cancelBtnClass = 'bg-[#e9edc9] text-[#52796f]';
+    errorClass = 'text-[#bc4749] bg-[#ffddd2] border border-[#bc4749]';
   } else {
     modalClass = 'bg-white rounded-3xl shadow-2xl text-toon-text';
     inputClass = 'bg-gray-50 rounded-xl border-2 border-transparent focus:bg-white focus:border-toon-accent';
     btnClass = 'bg-toon-primary text-white rounded-xl shadow-lg shadow-rose-200 hover:shadow-rose-300 hover:-translate-y-1';
     cancelBtnClass = 'bg-gray-100 text-gray-500 rounded-xl hover:bg-gray-200';
+    errorClass = 'text-red-500 bg-red-50 border border-red-200';
   }
 
   return (
@@ -99,15 +131,29 @@ const TaskModal: React.FC<TaskModalProps> = ({
       <div className={`w-full max-w-md transition-all animate-in fade-in zoom-in duration-200 ${modalClass}`}>
         {/* Header */}
         <div className={`flex items-center justify-between p-4 border-b border-gray-500/10`}>
-          <h2 className={`text-lg font-bold ${isArk || isCyber ? 'uppercase tracking-widest' : 'font-sans'}`}>
-            {initialData ? t.editTask : t.newTask}
-          </h2>
+          <div className="flex items-center gap-2">
+             <h2 className={`text-lg font-bold ${isArk || isCyber ? 'uppercase tracking-widest' : 'font-sans'}`}>
+              {initialData ? t.editTask : (parentTask ? t.newSubtask : t.newTask)}
+             </h2>
+             {parentTask && (
+               <span className={`text-xs px-2 py-0.5 rounded border opacity-70 flex items-center gap-1`}>
+                 <GitMerge size={10} /> {parentTask.title}
+               </span>
+             )}
+          </div>
           <button onClick={onClose} className="p-2 hover:opacity-70">
             <X size={20} />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          
+          {errorMsg && (
+            <div className={`text-xs p-2 rounded ${errorClass}`}>
+               {errorMsg}
+            </div>
+          )}
+
           {/* Title */}
           <div>
             <label className="block text-xs font-bold mb-1 opacity-70">{t.taskName}</label>
@@ -146,6 +192,35 @@ const TaskModal: React.FC<TaskModalProps> = ({
               />
             </div>
           </div>
+          
+          {/* Category Selector */}
+          <div>
+            <label className="block text-xs font-bold mb-1 opacity-70 flex items-center gap-1">
+              <Tag size={12} /> {t.categories}
+            </label>
+            <div className="flex flex-wrap gap-2 mt-2">
+              <button
+                type="button"
+                onClick={() => setCategoryId('')}
+                className={`text-xs px-3 py-1.5 rounded-full border transition-all ${!categoryId ? 'bg-opacity-20 border-current bg-current font-bold' : 'opacity-50 border-gray-500'}`}
+              >
+                {t.none}
+              </button>
+              {categories.map(cat => (
+                <button
+                   key={cat.id}
+                   type="button"
+                   onClick={() => setCategoryId(cat.id)}
+                   className={`text-xs px-3 py-1.5 rounded-full border transition-all 
+                     ${categoryId === cat.id 
+                       ? (isArk ? 'bg-ark-primary text-black border-ark-primary' : (isCyber ? 'bg-[#f0f] text-black border-[#f0f]' : 'bg-toon-primary text-white border-toon-primary')) 
+                       : (isArk ? 'bg-ark-surface border-ark-muted' : 'border-gray-500 opacity-60 hover:opacity-100')}`}
+                >
+                   {cat.name}
+                </button>
+              ))}
+            </div>
+          </div>
 
           {/* Description */}
           <div>
@@ -153,7 +228,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
               <FileText size={12} /> {t.details}
             </label>
             <textarea
-              rows={3}
+              rows={2}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               className={`w-full p-3 outline-none resize-none ${inputClass}`}

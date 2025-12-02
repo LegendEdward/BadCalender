@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Trophy, Crown, Sparkles } from 'lucide-react';
+import { Trophy, Crown, Sparkles, MessageCircle } from 'lucide-react';
 import { ThemeMode, Language } from '../types';
 import { translations } from '../translations';
 import PetAvatar, { PetMood } from './PetAvatar';
@@ -9,10 +9,11 @@ interface PetWidgetProps {
   totalCompleted: number;
   theme: ThemeMode;
   language: Language;
-  isRoaming: boolean;
+  onChatClick?: () => void;
+  petName?: string;
 }
 
-const PetWidget: React.FC<PetWidgetProps> = ({ totalCompleted, theme, language, isRoaming }) => {
+const PetWidget: React.FC<PetWidgetProps> = ({ totalCompleted, theme, language, onChatClick, petName = 'Pet' }) => {
   const level = Math.floor(totalCompleted / 5) + 1;
   const progress = totalCompleted % 5;
   const t = translations[language];
@@ -59,27 +60,24 @@ const PetWidget: React.FC<PetWidgetProps> = ({ totalCompleted, theme, language, 
       <div className="flex items-center gap-4 relative z-10">
         
         {/* Avatar Container */}
-        <div className="relative w-28 h-28 flex-shrink-0 flex items-center justify-center">
-          
-          {/* The Pet - Only visible if NOT roaming */}
-          <div className={`transition-opacity duration-500 ${isRoaming ? 'opacity-0 scale-50' : 'opacity-100 scale-100'}`}>
+        <div 
+           className="relative w-28 h-28 flex-shrink-0 flex items-center justify-center cursor-pointer group"
+           onClick={() => { setClickCount(c => c + 1); if(onChatClick) onChatClick(); }}
+        >
+          <div className={`transition-opacity duration-500 opacity-100 scale-100`}>
             <PetAvatar 
               action="idle"
               mood={clickCount > 3 ? 'excited' : 'neutral'}
               theme={theme}
               className="w-32 h-32" 
-              onClick={() => setClickCount(c => c + 1)}
             />
           </div>
 
-          {/* Empty State / Bed when roaming */}
-          <div className={`absolute inset-0 flex items-center justify-center transition-opacity duration-500 ${isRoaming ? 'opacity-100' : 'opacity-0'}`}>
-             <span className="text-xs font-bold opacity-40 text-center">
-               Running<br/>Around...
-             </span>
+          <div className="absolute bottom-0 right-0 bg-white text-black p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-md">
+             <MessageCircle size={16} />
           </div>
 
-          {level >= 5 && !isRoaming && (
+          {level >= 5 && (
             <div className="absolute top-0 right-0 animate-bounce">
               <Crown size={20} className="text-yellow-500 fill-yellow-500" />
             </div>
@@ -91,10 +89,10 @@ const PetWidget: React.FC<PetWidgetProps> = ({ totalCompleted, theme, language, 
           <div className="flex justify-between items-center mb-1">
              <div>
                 <h3 className="font-bold text-lg flex items-center gap-2">
-                  {t.petLevel} {level}
+                  {petName} <span className="text-xs opacity-60 font-normal">(Lv.{level})</span>
                 </h3>
                 <p className="text-xs opacity-60 font-mono">
-                  {isRoaming ? 'Exploring the screen' : 'Chilling at home'}
+                  {theme === 'arknights' ? 'Drone Standby' : (theme === 'cyberpunk' ? 'Ghost Online' : 'Status: Happy')}
                 </p>
              </div>
           </div>

@@ -15,8 +15,15 @@ export const formatDateKey = (date: Date): string => {
 export const getTodayKey = (): string => formatDateKey(new Date());
 
 export const parseTime = (timeStr: string): number => {
+  if (!timeStr) return 0;
   const [hours, minutes] = timeStr.split(':').map(Number);
   return hours * 60 + minutes;
+};
+
+export const formatTimeFromMinutes = (totalMinutes: number): string => {
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 };
 
 export const formatDuration = (minutes: number): string => {
