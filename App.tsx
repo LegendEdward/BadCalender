@@ -29,6 +29,7 @@ const App: React.FC = () => {
   // --- State ---
   const [theme, setTheme] = useState<ThemeMode>('arknights');
   const [language, setLanguage] = useState<Language>('zh-CN');
+  const [apiKey, setApiKey] = useState('');
   
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -76,6 +77,9 @@ const App: React.FC = () => {
     const savedLang = localStorage.getItem('chrono_lang') as Language;
     if (savedLang) setLanguage(savedLang);
 
+    const savedKey = localStorage.getItem('chrono_apikey');
+    if (savedKey) setApiKey(savedKey);
+
     const savedTasks = localStorage.getItem('chrono_tasks');
     if (savedTasks) try { setTasks(JSON.parse(savedTasks)); } catch (e) { console.error(e); }
 
@@ -98,6 +102,7 @@ const App: React.FC = () => {
   // Save changes
   useEffect(() => { localStorage.setItem('chrono_theme', theme); }, [theme]);
   useEffect(() => { localStorage.setItem('chrono_lang', language); }, [language]);
+  useEffect(() => { localStorage.setItem('chrono_apikey', apiKey); }, [apiKey]);
   useEffect(() => { localStorage.setItem('chrono_tasks', JSON.stringify(tasks)); }, [tasks]);
   useEffect(() => { localStorage.setItem('chrono_history', String(totalCompletedHistory)); }, [totalCompletedHistory]);
   useEffect(() => { localStorage.setItem('chrono_partitions', JSON.stringify(partitions)); }, [partitions]);
@@ -440,6 +445,8 @@ const App: React.FC = () => {
         setTheme={setTheme}
         currentLang={language}
         setLang={setLanguage}
+        apiKey={apiKey}
+        setApiKey={setApiKey}
       />
 
       <TaskModal 
@@ -484,6 +491,7 @@ const App: React.FC = () => {
         setPetName={setPetName}
         history={chatHistory}
         setHistory={setChatHistory}
+        apiKey={apiKey}
       />
     </div>
   );

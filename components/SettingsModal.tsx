@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { X, Globe, Palette, Bell } from 'lucide-react';
+import { X, Globe, Palette, Bell, Key } from 'lucide-react';
 import { ThemeMode, Language } from '../types';
 import { translations } from '../translations';
 
@@ -11,10 +11,12 @@ interface SettingsModalProps {
   setTheme: (t: ThemeMode) => void;
   currentLang: Language;
   setLang: (l: Language) => void;
+  apiKey: string;
+  setApiKey: (k: string) => void;
 }
 
 const SettingsModal: React.FC<SettingsModalProps> = ({ 
-  isOpen, onClose, currentTheme, setTheme, currentLang, setLang 
+  isOpen, onClose, currentTheme, setTheme, currentLang, setLang, apiKey, setApiKey
 }) => {
   if (!isOpen) return null;
 
@@ -47,14 +49,25 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const isCyber = currentTheme === 'cyberpunk';
   
   let modalClass = '';
-  if (currentTheme === 'arknights') modalClass = 'bg-ark-surface border-2 border-ark-primary text-white';
-  else if (currentTheme === 'cyberpunk') modalClass = 'bg-black border-2 border-[#f0f] text-[#0ff] shadow-[0_0_20px_#f0f]';
-  else if (currentTheme === 'nature') modalClass = 'bg-[#faedcd] border-2 border-[#ccd5ae] text-[#354f52]';
-  else modalClass = 'bg-white rounded-3xl text-gray-800';
+  let inputClass = '';
+  
+  if (currentTheme === 'arknights') {
+    modalClass = 'bg-ark-surface border-2 border-ark-primary text-white';
+    inputClass = 'bg-ark-bg border border-ark-muted text-white';
+  } else if (currentTheme === 'cyberpunk') {
+    modalClass = 'bg-black border-2 border-[#f0f] text-[#0ff] shadow-[0_0_20px_#f0f]';
+    inputClass = 'bg-[#111] border border-[#333] text-[#0ff]';
+  } else if (currentTheme === 'nature') {
+    modalClass = 'bg-[#faedcd] border-2 border-[#ccd5ae] text-[#354f52]';
+    inputClass = 'bg-[#fefae0] border border-[#d4a373]';
+  } else {
+    modalClass = 'bg-white rounded-3xl text-gray-800';
+    inputClass = 'bg-gray-50 border border-gray-200';
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className={`w-full max-w-sm p-6 animate-in zoom-in duration-200 ${modalClass}`}>
+      <div className={`w-full max-w-sm p-6 animate-in zoom-in duration-200 ${modalClass} max-h-[90vh] overflow-y-auto`}>
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-bold flex items-center gap-2">
             {t.settings}
@@ -105,6 +118,21 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               </button>
             ))}
           </div>
+        </div>
+
+        {/* API Key Section */}
+        <div className="mb-6">
+          <h3 className="text-sm font-bold opacity-70 mb-3 flex items-center gap-2">
+            <Key size={16} /> {t.aiConfig}
+          </h3>
+          <input 
+            type="password" 
+            value={apiKey}
+            onChange={(e) => setApiKey(e.target.value)}
+            placeholder={t.apiKeyPlaceholder}
+            className={`w-full p-3 rounded text-sm outline-none transition-all ${inputClass}`}
+          />
+          <p className="text-[10px] mt-2 opacity-60">{t.apiKeyHelp}</p>
         </div>
 
         {/* Notification Permission */}

@@ -16,10 +16,11 @@ interface PetChatModalProps {
   setPetName: (name: string) => void;
   history: ChatMessage[];
   setHistory: (h: ChatMessage[]) => void;
+  apiKey: string;
 }
 
 const PetChatModal: React.FC<PetChatModalProps> = ({
-  isOpen, onClose, theme, language, petName, setPetName, history, setHistory
+  isOpen, onClose, theme, language, petName, setPetName, history, setHistory, apiKey
 }) => {
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -94,8 +95,9 @@ const PetChatModal: React.FC<PetChatModalProps> = ({
     setIsLoading(true);
 
     try {
-      if (process.env.API_KEY) {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const activeKey = apiKey || process.env.API_KEY;
+      if (activeKey) {
+        const ai = new GoogleGenAI({ apiKey: activeKey });
         
         // Construct chat history text
         const context = newHistory.slice(-5).map(m => `${m.sender}: ${m.text}`).join('\n');
@@ -122,7 +124,7 @@ const PetChatModal: React.FC<PetChatModalProps> = ({
             const aiMsg: ChatMessage = {
                 id: generateId(),
                 sender: 'ai',
-                text: isArk ? "Command received. Processing..." : "Meow? (API Key missing)",
+                text: isArk ? "ERROR: API Key Missing. Please set in Settings." : "Meow? (Please set API Key in Settings!)",
                 timestamp: Date.now()
             };
             setHistory([...newHistory, aiMsg]);

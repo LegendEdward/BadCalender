@@ -73,7 +73,10 @@ export const translations: Record<Language, Record<string, string>> = {
     mindMapView: 'Mind Map View',
     listView: 'List View',
     filterBy: 'Filter:',
-    all: 'All'
+    all: 'All',
+    aiConfig: 'AI Configuration',
+    apiKeyPlaceholder: 'Enter Gemini API Key',
+    apiKeyHelp: 'Key is stored locally in your browser.',
   },
   'zh-CN': {
     appTitle: '时序计划',
@@ -146,7 +149,10 @@ export const translations: Record<Language, Record<string, string>> = {
     mindMapView: '思维导图',
     listView: '列表视图',
     filterBy: '筛选:',
-    all: '全部'
+    all: '全部',
+    aiConfig: 'AI配置 (Gemini)',
+    apiKeyPlaceholder: '在此输入 API Key',
+    apiKeyHelp: 'Key 仅保存在您的浏览器本地缓存中。',
   },
   'zh-TW': {
     appTitle: '時序計畫',
@@ -219,6 +225,9 @@ export const translations: Record<Language, Record<string, string>> = {
     mindMapView: '思維導圖',
     listView: '列表視圖',
     filterBy: '篩選:',
-    all: '全部'
+    all: '全部',
+    aiConfig: 'AI配置 (Gemini)',
+    apiKeyPlaceholder: '在此輸入 API Key',
+    apiKeyHelp: 'Key 僅保存在您的瀏覽器本地緩存中。',
   }
 };
