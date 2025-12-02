@@ -1,8 +1,8 @@
 
 import React from 'react';
 import { Task, ThemeMode, TimePartition, Category } from '../types';
-import { parseTime, formatDuration } from '../utils';
-import { ChevronDown, ChevronRight, Plus, GitCommit, Play, Circle, CheckCircle2 } from 'lucide-react';
+import { parseTime } from '../utils';
+import { ChevronDown, ChevronRight, Plus, GitCommit, Play, Circle, CheckCircle2, Square, CheckSquare } from 'lucide-react';
 
 interface TimelineProps {
   tasks: Task[];
@@ -14,6 +14,9 @@ interface TimelineProps {
   onEditTask: (task: Task) => void;
   onToggleComplete: (id: string) => void;
   onStartTask: (id: string, e: React.MouseEvent) => void;
+  isSelectionMode: boolean;
+  selectedTaskIds: Set<string>;
+  onToggleSelect: (id: string) => void;
 }
 
 const TimelineNode: React.FC<{
@@ -29,13 +32,17 @@ const TimelineNode: React.FC<{
   onToggleComplete: (id: string) => void;
   onStartTask: (id: string, e: React.MouseEvent) => void;
   allTasks: Task[]; // Need full list for recursion
-}> = ({ task, childrenTasks, depth, theme, categories, isExpanded, onToggleExpand, onAddSubtask, onEditTask, onToggleComplete, onStartTask, allTasks }) => {
+  isSelectionMode: boolean;
+  selectedTaskIds: Set<string>;
+  onToggleSelect: (id: string) => void;
+}> = ({ task, childrenTasks, depth, theme, categories, isExpanded, onToggleExpand, onAddSubtask, onEditTask, onToggleComplete, onStartTask, allTasks, isSelectionMode, selectedTaskIds, onToggleSelect }) => {
   
   const isArk = theme === 'arknights';
   const isCyber = theme === 'cyberpunk';
   const isNature = theme === 'nature';
 
   const category = categories.find(c => c.id === task.categoryId);
+  const isSelected = selectedTaskIds.has(task.id);
   
   // Styles
   let cardClass = '';
@@ -65,6 +72,15 @@ const TimelineNode: React.FC<{
     btnClass = 'text-gray-500 hover:text-gray-800';
   }
 
+  // Override click for selection mode
+  const handleCardClick = () => {
+    if (isSelectionMode) {
+      onToggleSelect(task.id);
+    } else {
+      onEditTask(task);
+    }
+  };
+
   return (
     <div className="relative animate-in fade-in slide-in-from-bottom-2 duration-300">
       
@@ -90,7 +106,10 @@ const TimelineNode: React.FC<{
          </div>
 
          {/* Task Card */}
-         <div className={`flex-1 mb-4 p-3 transition-all cursor-pointer ${cardClass} ${task.completed ? 'opacity-50 grayscale' : ''}`} onClick={() => onEditTask(task)}>
+         <div 
+            className={`flex-1 mb-4 p-3 transition-all cursor-pointer ${cardClass} ${task.completed ? 'opacity-50 grayscale' : ''} ${isSelectionMode && isSelected ? 'ring-2 ring-offset-1 ring-current' : ''}`} 
+            onClick={handleCardClick}
+         >
             <div className="flex justify-between items-start">
                <div>
                   <div className="flex items-center gap-2">
@@ -103,26 +122,36 @@ const TimelineNode: React.FC<{
                </div>
                
                <div className="flex items-center gap-2">
-                  <button onClick={(e) => { e.stopPropagation(); onAddSubtask(task); }} className={`p-1 rounded hover:bg-black/10 ${btnClass}`}>
-                     <Plus size={16} />
-                  </button>
-                  <button onClick={(e) => { e.stopPropagation(); onToggleComplete(task.id); }} className={`p-1 rounded hover:bg-black/10 ${btnClass}`}>
-                     {task.completed ? <CheckCircle2 size={18} /> : <Circle size={18} />}
-                  </button>
+                  {isSelectionMode ? (
+                     <div className={isSelected ? 'text-green-500' : 'opacity-30'}>
+                        {isSelected ? <CheckSquare size={20} /> : <Square size={20} />}
+                     </div>
+                  ) : (
+                    <>
+                      <button onClick={(e) => { e.stopPropagation(); onAddSubtask(task); }} className={`p-1 rounded hover:bg-black/10 ${btnClass}`}>
+                        <Plus size={16} />
+                      </button>
+                      <button onClick={(e) => { e.stopPropagation(); onToggleComplete(task.id); }} className={`p-1 rounded hover:bg-black/10 ${btnClass}`}>
+                        {task.completed ? <CheckCircle2 size={18} /> : <Circle size={18} />}
+                      </button>
+                    </>
+                  )}
                </div>
             </div>
 
-            <div className="flex items-center gap-2 mt-2 text-xs opacity-60">
-              <span>{task.durationMinutes} min</span>
-              {!task.isStarted && !task.completed && (
-                <button 
-                  onClick={(e) => onStartTask(task.id, e)}
-                  className="flex items-center gap-1 hover:text-green-500 hover:underline"
-                >
-                  <Play size={10} /> Start
-                </button>
-              )}
-            </div>
+            {!isSelectionMode && (
+              <div className="flex items-center gap-2 mt-2 text-xs opacity-60">
+                <span>{task.durationMinutes} min</span>
+                {!task.isStarted && !task.completed && (
+                  <button 
+                    onClick={(e) => onStartTask(task.id, e)}
+                    className="flex items-center gap-1 hover:text-green-500 hover:underline"
+                  >
+                    <Play size={10} /> Start
+                  </button>
+                )}
+              </div>
+            )}
          </div>
       </div>
 
@@ -144,6 +173,9 @@ const TimelineNode: React.FC<{
                 onToggleComplete={onToggleComplete}
                 onStartTask={onStartTask}
                 allTasks={allTasks}
+                isSelectionMode={isSelectionMode}
+                selectedTaskIds={selectedTaskIds}
+                onToggleSelect={onToggleSelect}
               />
             ))}
          </div>
@@ -153,7 +185,7 @@ const TimelineNode: React.FC<{
 }
 
 const Timeline: React.FC<TimelineProps> = ({ 
-  tasks, theme, partitions, categories, onToggleExpand, onAddSubtask, onEditTask, onToggleComplete, onStartTask 
+  tasks, theme, partitions, categories, onToggleExpand, onAddSubtask, onEditTask, onToggleComplete, onStartTask, isSelectionMode, selectedTaskIds, onToggleSelect 
 }) => {
   const isArk = theme === 'arknights';
   const isCyber = theme === 'cyberpunk';
@@ -230,6 +262,9 @@ const Timeline: React.FC<TimelineProps> = ({
                      onToggleComplete={onToggleComplete}
                      onStartTask={onStartTask}
                      allTasks={tasks}
+                     isSelectionMode={isSelectionMode}
+                     selectedTaskIds={selectedTaskIds}
+                     onToggleSelect={onToggleSelect}
                    />
                  ))}
               </div>
@@ -257,6 +292,9 @@ const Timeline: React.FC<TimelineProps> = ({
                      onToggleComplete={onToggleComplete}
                      onStartTask={onStartTask}
                      allTasks={tasks}
+                     isSelectionMode={isSelectionMode}
+                     selectedTaskIds={selectedTaskIds}
+                     onToggleSelect={onToggleSelect}
                    />
                  ))}
             </div>

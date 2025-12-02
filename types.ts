@@ -30,6 +30,13 @@ export interface Task {
   isExpanded?: boolean; // For UI state in timeline
 }
 
+export interface TaskBundle {
+  id: string;
+  name: string;
+  createdAt: number;
+  tasks: Task[];
+}
+
 export interface DateMetrics {
   total: number;
   completed: number;

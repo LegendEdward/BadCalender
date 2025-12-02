@@ -9,10 +9,14 @@ import {
   List,
   User,
   Filter,
-  Network
+  Network,
+  Grid,
+  CheckSquare,
+  X as XIcon,
+  Save
 } from 'lucide-react';
 
-import { ThemeMode, Task, Language, TimePartition, Category, UserProfile, ChatMessage } from './types';
+import { ThemeMode, Task, Language, TimePartition, Category, UserProfile, ChatMessage, TaskBundle } from './types';
 import { formatDateKey, getTodayKey, generateId } from './utils';
 import { translations } from './translations';
 import SettingsModal from './components/SettingsModal';
@@ -24,6 +28,7 @@ import PetWidget from './components/PetWidget';
 import ZoneManager from './components/ZoneManager';
 import UserProfileModal from './components/UserProfileModal';
 import PetChatModal from './components/PetChatModal';
+import TaskNetModal from './components/TaskNetModal';
 
 const App: React.FC = () => {
   // --- State ---
@@ -43,6 +48,11 @@ const App: React.FC = () => {
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   const [filterCategoryId, setFilterCategoryId] = useState<string | null>(null);
 
+  // Task Nets & Selection
+  const [taskBundles, setTaskBundles] = useState<TaskBundle[]>([]);
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
+
   // Configuration State
   const [partitions, setPartitions] = useState<TimePartition[]>([
     { id: 'p1', name: 'Morning', startTime: '06:00', endTime: '12:00' },
@@ -59,6 +69,7 @@ const App: React.FC = () => {
   const [isZoneManagerOpen, setIsZoneManagerOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isTaskNetOpen, setIsTaskNetOpen] = useState(false);
   
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [parentForSubtask, setParentForSubtask] = useState<Task | null>(null);
@@ -97,6 +108,9 @@ const App: React.FC = () => {
 
     const savedPetName = localStorage.getItem('chrono_petname');
     if (savedPetName) setPetName(savedPetName);
+
+    const savedBundles = localStorage.getItem('chrono_bundles');
+    if (savedBundles) try { setTaskBundles(JSON.parse(savedBundles)); } catch (e) {}
   }, []);
 
   // Save changes
@@ -109,6 +123,7 @@ const App: React.FC = () => {
   useEffect(() => { localStorage.setItem('chrono_categories', JSON.stringify(categories)); }, [categories]);
   useEffect(() => { localStorage.setItem('chrono_profile', JSON.stringify(userProfile)); }, [userProfile]);
   useEffect(() => { localStorage.setItem('chrono_petname', petName); }, [petName]);
+  useEffect(() => { localStorage.setItem('chrono_bundles', JSON.stringify(taskBundles)); }, [taskBundles]);
 
   // Sync Android Status Bar Color
   useEffect(() => {
@@ -220,6 +235,59 @@ const App: React.FC = () => {
     setSelectedDate(newDate);
   };
 
+  // --- Task Nets (Bundles) Logic ---
+  const handleToggleSelect = (id: string) => {
+    const newSet = new Set(selectedTaskIds);
+    if (newSet.has(id)) newSet.delete(id);
+    else newSet.add(id);
+    setSelectedTaskIds(newSet);
+  };
+
+  const saveSelectedToBundle = () => {
+    if (selectedTaskIds.size === 0) return;
+    const name = prompt(t.enterNetName);
+    if (!name) return;
+
+    // Capture tasks
+    const tasksToSave = tasks.filter(t => selectedTaskIds.has(t.id));
+    const newBundle: TaskBundle = {
+      id: generateId(),
+      name,
+      createdAt: Date.now(),
+      tasks: tasksToSave.map(t => ({...t})) // Clone
+    };
+
+    setTaskBundles(prev => [...prev, newBundle]);
+    alert(t.netCreated);
+    setIsSelectionMode(false);
+    setSelectedTaskIds(new Set());
+  };
+
+  const loadBundle = (bundle: TaskBundle) => {
+    if (!window.confirm(t.loadNetConfirm.replace('{0}', String(bundle.tasks.length)))) return;
+
+    // Clone tasks and update dates to current selected date
+    // Also regenerate IDs to avoid collisions if loaded multiple times
+    const idMap = new Map<string, string>();
+    bundle.tasks.forEach(t => idMap.set(t.id, generateId()));
+
+    const newTasks = bundle.tasks.map(t => ({
+      ...t,
+      id: idMap.get(t.id)!,
+      parentId: t.parentId ? idMap.get(t.parentId) : undefined,
+      dateStr: selectedDateStr,
+      completed: false,
+      isStarted: false
+    }));
+
+    setTasks(prev => [...prev, ...newTasks]);
+    setIsTaskNetOpen(false);
+  };
+
+  const deleteBundle = (id: string) => {
+    setTaskBundles(prev => prev.filter(b => b.id !== id));
+  };
+
   // --- Dynamic Styling ---
   const isArk = theme === 'arknights';
   const isCyber = theme === 'cyberpunk';
@@ -258,13 +326,13 @@ const App: React.FC = () => {
       
       {/* Top Bar */}
       <header className={`sticky top-0 z-30 px-4 py-4 flex items-center justify-between backdrop-blur-md ${headerClass}`}>
-        <div className="flex items-center gap-2" onClick={() => setView(view === 'calendar' ? 'day' : 'calendar')}>
+        <div className="flex items-center gap-2" onClick={() => !isSelectionMode && setView(view === 'calendar' ? 'day' : 'calendar')}>
            <div className={`p-2 rounded-lg cursor-pointer transition-colors ${isArk ? 'bg-ark-primary/20 text-ark-primary' : (isCyber ? 'bg-[#111] border border-[#0ff] text-[#0ff]' : 'bg-white text-toon-primary shadow-sm')}`}>
               <CalendarIcon size={20} />
            </div>
            <div>
              <h1 className={`text-lg font-bold leading-none ${isArk || isCyber ? 'uppercase' : ''}`}>
-               {view === 'calendar' ? t.calendar : (view === 'mindmap' ? t.mindMapView : t.dailyPlan)}
+               {isSelectionMode ? t.selectionMode : (view === 'calendar' ? t.calendar : (view === 'mindmap' ? t.mindMapView : t.dailyPlan))}
              </h1>
              <p className="text-xs opacity-60">
                {selectedDate.toLocaleDateString(language, { weekday: 'long', month: 'short', day: 'numeric' })}
@@ -273,31 +341,60 @@ const App: React.FC = () => {
         </div>
         
         <div className="flex gap-2">
-           {/* Profile Button */}
-           <button 
-             onClick={() => setIsProfileOpen(true)}
-             className={`p-2 rounded-full transition-all ${isArk ? 'bg-ark-surface border border-ark-muted' : (isCyber ? 'bg-black border border-[#f0f] text-[#f0f]' : 'bg-white shadow-sm')}`}
-           >
-              {userProfile.avatar ? (
-                <img src={userProfile.avatar} className="w-5 h-5 rounded-full object-cover" alt="Me" />
-              ) : (
-                <User size={20} />
-              )}
-           </button>
-           {/* Settings Button */}
-           <button 
-             onClick={() => setIsSettingsOpen(true)}
-             className={`p-2 rounded-full transition-transform hover:rotate-90 ${isArk ? 'bg-ark-surface border border-ark-muted' : (isCyber ? 'bg-black border border-[#f0f] text-[#f0f]' : 'bg-white shadow-sm')}`}
-           >
-             <Settings size={20} />
-           </button>
+           {isSelectionMode ? (
+             <>
+                <button 
+                  onClick={() => { setIsSelectionMode(false); setSelectedTaskIds(new Set()); }}
+                  className={`p-2 rounded-full border border-current opacity-60 hover:opacity-100`}
+                >
+                  <XIcon size={20} />
+                </button>
+                <button 
+                  onClick={saveSelectedToBundle}
+                  className={`p-2 rounded-full border border-current font-bold text-green-500 hover:bg-green-500 hover:text-white`}
+                  disabled={selectedTaskIds.size === 0}
+                >
+                  <Save size={20} />
+                </button>
+             </>
+           ) : (
+             <>
+               {/* Selection Mode Toggle */}
+               {view === 'day' && (
+                 <button 
+                   onClick={() => setIsSelectionMode(true)}
+                   className={`p-2 rounded-full transition-all ${isArk ? 'bg-ark-surface border border-ark-muted' : (isCyber ? 'bg-black border border-[#f0f] text-[#f0f]' : 'bg-white shadow-sm')}`}
+                 >
+                    <CheckSquare size={20} />
+                 </button>
+               )}
+               {/* Profile Button */}
+               <button 
+                 onClick={() => setIsProfileOpen(true)}
+                 className={`p-2 rounded-full transition-all ${isArk ? 'bg-ark-surface border border-ark-muted' : (isCyber ? 'bg-black border border-[#f0f] text-[#f0f]' : 'bg-white shadow-sm')}`}
+               >
+                  {userProfile.avatar ? (
+                    <img src={userProfile.avatar} className="w-5 h-5 rounded-full object-cover" alt="Me" />
+                  ) : (
+                    <User size={20} />
+                  )}
+               </button>
+               {/* Settings Button */}
+               <button 
+                 onClick={() => setIsSettingsOpen(true)}
+                 className={`p-2 rounded-full transition-transform hover:rotate-90 ${isArk ? 'bg-ark-surface border border-ark-muted' : (isCyber ? 'bg-black border border-[#f0f] text-[#f0f]' : 'bg-white shadow-sm')}`}
+               >
+                 <Settings size={20} />
+               </button>
+             </>
+           )}
         </div>
       </header>
 
       <main className="p-4 max-w-lg mx-auto">
         
-        {/* PET WIDGET (Always visible on Day/Mindmap view) */}
-        {(view === 'day' || view === 'mindmap') && (
+        {/* PET WIDGET */}
+        {(view === 'day' || view === 'mindmap') && !isSelectionMode && (
           <PetWidget 
             totalCompleted={totalCompletedHistory} 
             theme={theme} 
@@ -348,55 +445,59 @@ const App: React.FC = () => {
         {(view === 'day' || view === 'mindmap') && (
           <div className="animate-in slide-in-from-bottom-4 duration-300">
             {/* Nav & Filter */}
-            <div className="flex flex-col gap-4 mb-6">
-               <div className="flex items-center justify-between">
-                  <button onClick={() => changeDate(-1)} className={`p-2 hover:opacity-70`}><ChevronLeft /></button>
-                  <div className={`text-sm font-bold px-4 py-1 ${isArk ? 'bg-ark-surface border border-ark-muted' : (isCyber ? 'border border-[#0ff] text-[#0ff]' : 'bg-white rounded-full shadow-sm text-gray-500')}`}>
-                    {selectedDateStr === todayStr ? t.today : selectedDateStr}
-                  </div>
-                  <button onClick={() => changeDate(1)} className={`p-2 hover:opacity-70`}><ChevronRight /></button>
-               </div>
+            {!isSelectionMode && (
+              <div className="flex flex-col gap-4 mb-6">
+                 <div className="flex items-center justify-between">
+                    <button onClick={() => changeDate(-1)} className={`p-2 hover:opacity-70`}><ChevronLeft /></button>
+                    <div className={`text-sm font-bold px-4 py-1 ${isArk ? 'bg-ark-surface border border-ark-muted' : (isCyber ? 'border border-[#0ff] text-[#0ff]' : 'bg-white rounded-full shadow-sm text-gray-500')}`}>
+                      {selectedDateStr === todayStr ? t.today : selectedDateStr}
+                    </div>
+                    <button onClick={() => changeDate(1)} className={`p-2 hover:opacity-70`}><ChevronRight /></button>
+                 </div>
 
-               {/* Category Filter Pills */}
-               <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                  <button
-                    onClick={() => setFilterCategoryId(null)}
-                    className={`whitespace-nowrap px-3 py-1 rounded-full text-xs font-bold border transition-all 
-                       ${!filterCategoryId ? 'bg-current text-black dark:text-white bg-opacity-20 border-current' : 'opacity-50 border-gray-500'}
-                    `}
-                  >
-                     {t.all}
-                  </button>
-                  {categories.map(cat => (
-                     <button
-                        key={cat.id}
-                        onClick={() => setFilterCategoryId(filterCategoryId === cat.id ? null : cat.id)}
-                        className={`whitespace-nowrap px-3 py-1 rounded-full text-xs font-bold border transition-all 
-                          ${filterCategoryId === cat.id 
-                            ? (isArk ? 'bg-ark-primary text-black border-ark-primary' : (isCyber ? 'bg-[#f0f] text-black border-[#f0f]' : 'bg-toon-primary text-white border-toon-primary')) 
-                            : 'opacity-50 border-gray-500'}
-                        `}
-                     >
-                        {cat.name}
-                     </button>
-                  ))}
-               </div>
-            </div>
+                 {/* Category Filter Pills */}
+                 <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                    <button
+                      onClick={() => setFilterCategoryId(null)}
+                      className={`whitespace-nowrap px-3 py-1 rounded-full text-xs font-bold border transition-all 
+                         ${!filterCategoryId ? 'bg-current text-black dark:text-white bg-opacity-20 border-current' : 'opacity-50 border-gray-500'}
+                      `}
+                    >
+                       {t.all}
+                    </button>
+                    {categories.map(cat => (
+                       <button
+                          key={cat.id}
+                          onClick={() => setFilterCategoryId(filterCategoryId === cat.id ? null : cat.id)}
+                          className={`whitespace-nowrap px-3 py-1 rounded-full text-xs font-bold border transition-all 
+                            ${filterCategoryId === cat.id 
+                              ? (isArk ? 'bg-ark-primary text-black border-ark-primary' : (isCyber ? 'bg-[#f0f] text-black border-[#f0f]' : 'bg-toon-primary text-white border-toon-primary')) 
+                              : 'opacity-50 border-gray-500'}
+                          `}
+                       >
+                          {cat.name}
+                       </button>
+                    ))}
+                 </div>
+              </div>
+            )}
 
             {/* View Switcher Button */}
-            <div className="flex justify-end mb-2">
-                <button onClick={() => setView(view === 'day' ? 'mindmap' : 'day')} className="text-xs flex items-center gap-1 opacity-70 hover:opacity-100">
-                   {view === 'day' ? <Network size={14} /> : <List size={14} />} {view === 'day' ? t.mindMapView : t.listView}
-                </button>
-            </div>
+            {!isSelectionMode && (
+              <div className="flex justify-end mb-2">
+                  <button onClick={() => setView(view === 'day' ? 'mindmap' : 'day')} className="text-xs flex items-center gap-1 opacity-70 hover:opacity-100">
+                     {view === 'day' ? <Network size={14} /> : <List size={14} />} {view === 'day' ? t.mindMapView : t.listView}
+                  </button>
+              </div>
+            )}
 
             {/* Delayed Tasks */}
-            {selectedDateStr === todayStr && delayedTasks.length > 0 && view === 'day' && (
+            {selectedDateStr === todayStr && delayedTasks.length > 0 && view === 'day' && !isSelectionMode && (
               <DelayedList theme={theme} tasks={delayedTasks} language={language} onComplete={handleToggleComplete} />
             )}
 
             {/* MAIN CONTENT SWITCH */}
-            {view === 'mindmap' ? (
+            {view === 'mindmap' && !isSelectionMode ? (
                 <MindMapTimeline 
                   tasks={currentTasks} // Pass ONLY current date tasks
                   theme={theme}
@@ -416,6 +517,9 @@ const App: React.FC = () => {
                   onEditTask={(task) => { setEditingTask(task); setIsModalOpen(true); }}
                   onToggleComplete={handleToggleComplete}
                   onStartTask={handleStartTask}
+                  isSelectionMode={isSelectionMode}
+                  selectedTaskIds={selectedTaskIds}
+                  onToggleSelect={handleToggleSelect}
                 />
             )}
           </div>
@@ -423,19 +527,32 @@ const App: React.FC = () => {
       </main>
 
       {/* FABs */}
-      <button
-        onClick={() => setIsZoneManagerOpen(true)}
-        className={`fixed bottom-24 right-6 p-3 transition-all hover:scale-110 active:scale-90 z-40 ${fabSecondaryClass}`}
-      >
-        <List size={24} />
-      </button>
+      {!isSelectionMode && (
+        <>
+          <button
+            onClick={() => setIsTaskNetOpen(true)}
+            className={`fixed bottom-40 right-6 p-3 transition-all hover:scale-110 active:scale-90 z-40 ${fabSecondaryClass} border-none bg-opacity-90`}
+            title={t.taskNets}
+          >
+            <Grid size={24} />
+          </button>
 
-      <button
-        onClick={() => { setEditingTask(null); setParentForSubtask(null); setIsModalOpen(true); }}
-        className={`fixed bottom-6 right-6 p-4 transition-all hover:scale-110 active:scale-90 z-40 ${fabClass}`}
-      >
-        <Plus size={28} />
-      </button>
+          <button
+            onClick={() => setIsZoneManagerOpen(true)}
+            className={`fixed bottom-24 right-6 p-3 transition-all hover:scale-110 active:scale-90 z-40 ${fabSecondaryClass}`}
+            title={t.manageConfig}
+          >
+            <List size={24} />
+          </button>
+
+          <button
+            onClick={() => { setEditingTask(null); setParentForSubtask(null); setIsModalOpen(true); }}
+            className={`fixed bottom-6 right-6 p-4 transition-all hover:scale-110 active:scale-90 z-40 ${fabClass}`}
+          >
+            <Plus size={28} />
+          </button>
+        </>
+      )}
 
       {/* Modals */}
       <SettingsModal
@@ -459,6 +576,7 @@ const App: React.FC = () => {
         initialData={editingTask}
         categories={categories}
         parentTask={parentForSubtask}
+        existingTasks={currentTasks} // Pass current tasks for conflict checking
       />
 
       <ZoneManager 
@@ -492,6 +610,16 @@ const App: React.FC = () => {
         history={chatHistory}
         setHistory={setChatHistory}
         apiKey={apiKey}
+      />
+
+      <TaskNetModal
+        isOpen={isTaskNetOpen}
+        onClose={() => setIsTaskNetOpen(false)}
+        bundles={taskBundles}
+        onLoadBundle={loadBundle}
+        onDeleteBundle={deleteBundle}
+        theme={theme}
+        language={language}
       />
     </div>
   );
